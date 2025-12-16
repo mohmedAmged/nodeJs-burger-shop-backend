@@ -1,10 +1,15 @@
 import { Router } from "express";
+import authorize from "../middlewares/auth.middleware.js";
+import { addItemToCart, getAllCartItems, removeItemFromCart, updateItemInCart } from "../controllers/cart.controller.js";
 
 const cartRouter = Router();
 
-cartRouter.get('/', (req, res)=>res.send({message: 'get all cart items'}));
-cartRouter.post('/add', (req, res)=>res.send({message: 'add item to cart'}));
-cartRouter.put('/update/:id', (req, res)=>res.send({message: `update item with id ${req.params.id} in cart`}));
-cartRouter.delete('/remove/:id', (req, res)=>res.send({message: `remove item with id ${req.params.id} from cart`}));
+cartRouter.get('/', authorize, getAllCartItems);
+
+cartRouter.post('/add', authorize, addItemToCart);
+
+cartRouter.put('/update/:slug', authorize, updateItemInCart);
+
+cartRouter.delete('/remove/:slug', authorize, removeItemFromCart);
 
 export default cartRouter;
