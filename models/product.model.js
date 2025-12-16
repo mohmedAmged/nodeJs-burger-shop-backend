@@ -11,11 +11,22 @@ const productSchema = new mongoose.Schema(
             type: Number,
             required: true,
         },
+        currency:{
+            type: String,
+            default: 'EGP'
+        },
         image: String,
         category: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Category",
+            // type: mongoose.Schema.Types.ObjectId,
+            // ref: "Category",
+            type: String,
             required: true,
+        },
+        slug: {
+            type: String,
+            unique: true,
+            lowercase: true,
+            trim: true,
         },
         title: String,
         available: {

@@ -7,14 +7,22 @@ import cartRouter from './routes/cart.routes.js';
 import orderRouter from './routes/order.routes.js';
 import connectToDatabase from './database/mongodb.js';
 import errorMiddleware from './middlewares/error.middleware.js';
+import arcjetMiddleware from './middlewares/arcjet.middleware.js';
+import productRouter from './routes/product.routes.js';
+import categoryRouter from './routes/category.routes.js';
 
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({extended: false}));
 app.use(cookieParser())
+app.use(arcjetMiddleware)
+
+
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/users', userRouter);
+app.use('/api/v1/categories', categoryRouter);
+app.use('/api/v1/products', productRouter);
 app.use('/api/v1/cart', cartRouter);
 app.use('/api/v1/orders', orderRouter);
 
