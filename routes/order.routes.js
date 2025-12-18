@@ -1,20 +1,16 @@
 import { Router } from "express";
+import authorize from "../middlewares/auth.middleware.js";
+import { createOrder, getAllOrders, getOrderDetails, getUserOrders, updateOrderStatus } from "../controllers/order.controller.js";
 
 const orderRouter = Router();
 
-orderRouter.post('/create', (req, res) => {
-    res.send({ message: 'create a new order' });
-});
+// user apis
+orderRouter.post('/create', authorize, createOrder);
+orderRouter.get('/my-orders', authorize, getUserOrders);
+orderRouter.get('/my-orders/:id', authorize, getOrderDetails);
 
-orderRouter.get('/:id', (req, res) => {
-    res.send({ message: `get order with id ${req.params.id}` });
-});
-
-orderRouter.get('/view', (req, res) => {
-    res.send({ message: `view all orders from users by admin`});
-})
-
-orderRouter.put('/update-order-status', (req, res) => {
-    res.send({ message: `update order status by admin`});
-})
+// admin apis
+orderRouter.get('/all-orders', authorize, getAllOrders)
+orderRouter.get('/all-orders/:id', authorize, getOrderDetails)
+orderRouter.put('/:id/status', authorize, updateOrderStatus)
 export default orderRouter;
