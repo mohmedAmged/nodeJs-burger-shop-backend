@@ -32,9 +32,24 @@ app.get('/', (req, res)=>{
 res.send('welcome to the burger backend api!');
 });
 
-app.listen(PORT, async()=>{
-    console.log(`burger backend api work on http://localhost:${PORT}`);
-    await connectToDatabase()
-});
+// app.listen(PORT, async()=>{
+//     console.log(`burger backend api work on http://localhost:${PORT}`);
+//     await connectToDatabase()
+// });
+const start = async () => {
+  try {
+    await connectToDatabase();
+    app.listen(PORT, () => {
+      console.log(`burger backend api work on http://localhost:${PORT}`);
+    });
+  } catch (err) {
+    console.error('Failed to start application:', err);
+    process.exit(1);
+  }
+};
+
+if (process.env.NODE_ENV !== 'test') {
+  start();
+}
 
 export default app;
