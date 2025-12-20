@@ -1,4 +1,5 @@
 import express from 'express'
+import cors from 'cors'
 import cookieParser from 'cookie-parser';
 import { PORT } from './config/env.js';
 import authRouter from './routes/auth.routes.js';
@@ -12,7 +13,13 @@ import productRouter from './routes/product.routes.js';
 import categoryRouter from './routes/category.routes.js';
 
 const app = express();
-
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'https://burger-shop-gamma-wine.vercel.app', // add when deployed
+  ],
+  credentials: true,
+}))
 app.use(express.json());
 app.use(express.urlencoded({extended: false}));
 app.use(cookieParser())
