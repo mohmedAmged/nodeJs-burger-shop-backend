@@ -19,7 +19,7 @@ try {
         }
 
         const cart = await Cart.findOne({ user: userId })
-            .populate('items.product', 'name price slug image')
+            .populate('items.product', 'name price slug image category title description currency')
             .lean();
 
         const items = (cart && cart.items) ? cart.items : [];
