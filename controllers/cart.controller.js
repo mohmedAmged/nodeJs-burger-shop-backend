@@ -197,7 +197,7 @@ try {
     }
     cart.totalPrice = recalcCartTotal(cart.items);
     await cart.save();
-    await cart.populate('items.product', 'name price slug image');
+    await cart.populate('items.product', 'name price slug image category title description currency');
     res.status(200).json({ success: true, message: 'Cart updated', data: cart.items });
 } catch (error) {
     next(error);
@@ -244,7 +244,7 @@ try {
     }
     cart.totalPrice = recalcCartTotal(cart.items);
     await cart.save();
-    await cart.populate('items.product', 'name price slug image');
+    await cart.populate('items.product', 'name price slug image category title description currency');
     res.status(200).json({ success: true, message: 'Item removed from cart', data: cart.items });
 } catch (error) {
     next(error);
