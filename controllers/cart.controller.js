@@ -23,7 +23,7 @@ try {
             .lean();
 
         const items = (cart && cart.items) ? cart.items : [];
-        res.status(200).json({ success: true, message: 'Cart items fetched', data: items });
+        res.status(200).json({ success: true, message: 'Cart items fetched', data: {items, totalPrice: cart?.totalPrice || 0} });
 } catch (error) {
     next(error);
 }
@@ -75,22 +75,41 @@ try {
         error.statusCode = 400;
         throw error;
     }
-
+    const price = productDoc.price;
+    const itemTotal = price * qty;
     let cart = await Cart.findOne({ user: userId });
     if (!cart) {
         cart = await Cart.create({
             user: userId,
-            items: [{ product: productDoc._id, quantity: qty }]
+            items: [{
+                product: productDoc._id,
+                quantity: qty,
+                price,
+                itemTotal
+                }],
+                totalPrice: itemTotal,
         });
     } else {
         const itemIndex = cart.items.findIndex(item => String(item.product) === String(productDoc._id));
         if (itemIndex > -1) {
             cart.items[itemIndex].quantity += qty;
+            cart.items[itemIndex].itemTotal =
+                cart.items[itemIndex].quantity * price;
         } else {
-            cart.items.push({ product: productDoc._id, quantity: qty });
+            cart.items.push({
+                product: productDoc._id,
+                quantity: qty,
+                price,
+                itemTotal,
+                });
         }
+        cart.totalPrice = cart.items.reduce(
+        (sum, item) => sum + item.itemTotal,
+        0
+        );
         await cart.save();
     }
+    
 
     await cart.populate('items.product', 'name price slug image');
     res.status(201).json({ success: true, message: 'Item added to cart', data: cart.items });
@@ -172,6 +191,11 @@ try {
         cart.items.splice(itemIndex, 1);
     } else {
         cart.items[itemIndex].quantity = qty;
+        cart.items[itemIndex].itemTotal =
+            cart.items[itemIndex].price * qty;
+            cart.totalPrice = cart.items.reduce(
+            (sum, item) => sum + item.itemTotal,
+            0);
     }
 
     await cart.save();
@@ -220,7 +244,10 @@ try {
     if (restoreQty > 0) {
         await Product.findByIdAndUpdate(productDoc._id, { $inc: { stock: restoreQty } });
     }
-
+    cart.totalPrice = cart.items.reduce(
+    (sum, item) => sum + item.itemTotal,
+    0
+    );
     await cart.save();
     await cart.populate('items.product', 'name price slug image');
     res.status(200).json({ success: true, message: 'Item removed from cart', data: cart.items });
