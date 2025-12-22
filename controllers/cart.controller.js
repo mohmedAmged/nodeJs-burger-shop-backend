@@ -2,12 +2,17 @@ import mongoose from "mongoose";
 import Cart from "../models/cart.model.js";
 import Product from "../models/product.model.js";
 
+// HELPERS
 const resolveProductByIdOrSlug = async (identifier) => {
     if (mongoose.Types.ObjectId.isValid(String(identifier))) {
         return await Product.findById(identifier).select('_id name price slug image available').lean();
     }
     return await Product.findOne({ slug: String(identifier).toLowerCase() }).select('_id name price slug image available').lean();
 }
+const recalcCartTotal = (items) =>
+    items.reduce((sum, item) => sum + item.itemTotal, 0);
+
+// GET CART
 
 export const getAllCartItems = async(req,res,next)=>{
 try {
@@ -40,7 +45,7 @@ try {
     
     const { product, quantity = 1 } = req.body;
     const qty = parseInt(quantity, 10) || 1;
-    if (qty < 1) {
+    if (isNaN(qty) || qty < 1) {
         const error = new Error('Quantity must be at least 1');
         error.statusCode = 400;
         throw error;
@@ -75,8 +80,8 @@ try {
         error.statusCode = 400;
         throw error;
     }
-    const price = productDoc.price;
-    const itemTotal = price * qty;
+    // const price = productDoc.price;
+    const itemTotal = productDoc.price * qty;
     let cart = await Cart.findOne({ user: userId });
     if (!cart) {
         cart = await Cart.create({
@@ -84,30 +89,27 @@ try {
             items: [{
                 product: productDoc._id,
                 quantity: qty,
-                price,
                 itemTotal
                 }],
                 totalPrice: itemTotal,
         });
     } else {
-        const itemIndex = cart.items.findIndex(item => String(item.product) === String(productDoc._id));
-        if (itemIndex > -1) {
-            cart.items[itemIndex].quantity += qty;
-            cart.items[itemIndex].itemTotal =
-                cart.items[itemIndex].quantity * price;
-        } else {
-            cart.items.push({
-                product: productDoc._id,
-                quantity: qty,
-                price,
-                itemTotal,
-                });
-        }
-        cart.totalPrice = cart.items.reduce(
-        (sum, item) => sum + item.itemTotal,
-        0
-        );
-        await cart.save();
+      const item = cart.items.find(
+        (i) => String(i.product) === String(productDoc._id)
+      );
+
+      if (item) {
+        item.quantity += qty;
+        item.itemTotal = item.quantity * productDoc.price;
+      } else {
+        cart.items.push({
+          product: productDoc._id,
+          quantity: qty,
+          itemTotal,
+        });
+      }
+      cart.totalPrice = recalcCartTotal(cart.items);
+      await cart.save();
     }
     
 
@@ -191,13 +193,9 @@ try {
         cart.items.splice(itemIndex, 1);
     } else {
         cart.items[itemIndex].quantity = qty;
-        cart.items[itemIndex].itemTotal =
-            cart.items[itemIndex].price * qty;
-            cart.totalPrice = cart.items.reduce(
-            (sum, item) => sum + item.itemTotal,
-            0);
+        cart.items[itemIndex].itemTotal = productDoc.price * qty;
     }
-
+    cart.totalPrice = recalcCartTotal(cart.items);
     await cart.save();
     await cart.populate('items.product', 'name price slug image');
     res.status(200).json({ success: true, message: 'Cart updated', data: cart.items });
@@ -244,10 +242,7 @@ try {
     if (restoreQty > 0) {
         await Product.findByIdAndUpdate(productDoc._id, { $inc: { stock: restoreQty } });
     }
-    cart.totalPrice = cart.items.reduce(
-    (sum, item) => sum + item.itemTotal,
-    0
-    );
+    cart.totalPrice = recalcCartTotal(cart.items);
     await cart.save();
     await cart.populate('items.product', 'name price slug image');
     res.status(200).json({ success: true, message: 'Item removed from cart', data: cart.items });
