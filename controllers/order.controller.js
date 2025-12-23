@@ -5,13 +5,20 @@ import Order from "../models/order.model.js";
 export const getUserOrders = async (req,res,next)=>{
     try {
         const userId = req.user && req.user._id;
+        const { days } = req.query;
+        let filter = { user: userId };
         if (!userId) {
             const error = new Error("Unauthorized");
             error.statusCode = 401;
             throw error;
         }
+        if (days) {
+            const fromDate = new Date();
+            fromDate.setDate(fromDate.getDate() - Number(days));
+            filter.createdAt = { $gte: fromDate };
+            }
 
-        const orders = await Order.find({ user: userId }).populate("items.product", "name price slug image").sort({ createdAt: -1 });
+        const orders = await Order.find(filter).populate("items.product", "name price slug image").sort({ createdAt: -1 });
         res.status(200).json({ success: true, message: "User orders fetched", data: orders });
     } catch (error) {
         next(error)
