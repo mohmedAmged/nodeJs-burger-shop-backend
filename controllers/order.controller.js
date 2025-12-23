@@ -44,12 +44,11 @@ export const createOrder = async (req,res,next)=>{
         }
 
         // Build order items and total price
-        let totalPrice = 0;
+        // let totalPrice = 0;
         const orderItems = cart.items.map((item) => {
             const prod = item.product;
-            const price = prod.price || 0;
             const qty = item.quantity || 0;
-            totalPrice += price * qty;
+            const price = item.itemTotal / item.quantity;
             return {
                 product: prod,
                 quantity: qty,
@@ -62,7 +61,7 @@ export const createOrder = async (req,res,next)=>{
                 {
                     user: userId,
                     items: orderItems,
-                    totalPrice,
+                    totalPrice: cart.totalPrice,
                     deliveryAddress,
                     paymentMethod,
                 },
