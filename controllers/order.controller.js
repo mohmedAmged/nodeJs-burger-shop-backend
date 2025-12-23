@@ -70,7 +70,7 @@ export const createOrder = async (req,res,next)=>{
         );
 
         // clear cart
-        await Cart.findOneAndUpdate({ user: userId }, { items: [] }, { session });
+        await Cart.findOneAndUpdate({ user: userId }, { items: [], totalPrice: 0 }, { session });
 
         await session.commitTransaction();
         session.endSession();
