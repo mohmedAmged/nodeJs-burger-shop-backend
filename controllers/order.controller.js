@@ -162,7 +162,7 @@ export const updateOrderStatus = async (req,res,next)=>{
 
         const { id } = req.params;
         const { status } = req.body;
-        const allowed = ["PENDING", "PREPARING", "ON_THE_WAY", "DELIVERED"];
+        const allowed = ["PENDING", "PREPARING", "SHIPPED", "DELIVERED"];
         if (!status || !allowed.includes(status)) {
             const error = new Error("Invalid status");
             error.statusCode = 400;
