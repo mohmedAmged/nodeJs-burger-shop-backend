@@ -22,7 +22,7 @@ export const sendOrderEmail = async (to, type, order) => {
     const subject = template.generateSubject(mailInfo);
 
     const emailOptions = {
-        from: accountEmail,
+        from: `"Burger Shop" <${accountEmail}>`,
         to: to,
         subject: subject,
         html: message, 
