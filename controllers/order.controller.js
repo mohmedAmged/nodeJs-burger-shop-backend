@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import Cart from "../models/cart.model.js";
 import Order from "../models/order.model.js";
-import { workFlowClient } from "../config/upstash.js";
+import { workflowClient } from "../config/upstash.js";
 import { SERVER_URL } from "../config/env.js";
 // user controller
 export const getUserOrders = async (req,res,next)=>{
@@ -86,15 +86,21 @@ export const createOrder = async (req,res,next)=>{
 
         
         // Trigger the order workflow
-        const serverUrl = SERVER_URL || "http://localhost:3000";
+        let origin = SERVER_URL;
+        if (!origin || !/^https?:\/\//i.test(origin)) {
+            const forwardedProto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0];
+            origin = `${forwardedProto}://${req.get('host')}`;
+        }
+        const destination = `${origin.replace(/\/$/, '')}/api/v1/workflows/order`;
+
         try {
-            await workFlowClient.publishJSON({
-                url: `${serverUrl}/api/v1/workflows/order`,
-                body: { orderId: created._id }
+            await workflowClient.trigger({
+                url: destination,
+                body: { orderId: created._id },
+                retries: 0
             });
-        } catch (error) {
-            console.error("Failed to trigger order workflow:", error);
-            // We do not throw here to allow the order response to return successfully
+        } catch (wfError) {
+             console.error('Failed to trigger workflow (non-fatal):', wfError?.message || wfError);
         }
 
         res.status(201).json({ success: true, message: "Order created successfully", data: created });
@@ -133,7 +139,7 @@ export const getOrderDetails = async (req,res,next)=>{
             const error = new Error("Forbidden");
             error.statusCode = 403;
             throw error;
-        }
+        };
 
         res.status(200).json({ success: true, message: "Order details fetched", data: order });
     } catch (error) {
@@ -200,12 +206,13 @@ export const updateOrderStatus = async (req,res,next)=>{
         
         // Notify the workflow about the status change
         try {
-            await workFlowClient.publishJSON({
-                topic: `order-updated-${id}`,
-                body: { status }
+            console.log(`Notifying workflow: order-updated-${id} with status ${status}`);
+            await workflowClient.notify({
+                eventId: `order-updated-${id}`,
+                eventData: { status }
             });
-        } catch (error) {
-            console.error("Failed to notify order workflow:", error);
+        } catch (wfError) {
+             console.error('Failed to notify workflow (non-fatal):', wfError?.message || wfError);
         }
 
         res.status(200).json({ success: true, message: "Order status updated", data: order });
