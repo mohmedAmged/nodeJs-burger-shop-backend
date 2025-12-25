@@ -205,14 +205,23 @@ export const updateOrderStatus = async (req,res,next)=>{
 
         
         // Notify the workflow about the status change
+        // We're converting to a trigger model to ensure robustness
+        let origin = SERVER_URL;
+        if (!origin || !/^https?:\/\//i.test(origin)) {
+            const forwardedProto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0];
+            origin = `${forwardedProto}://${req.get('host')}`;
+        }
+        const destination = `${origin.replace(/\/$/, '')}/api/v1/workflows/order`;
+
         try {
-            console.log(`Notifying workflow: order-updated-${id} with status ${status}`);
-            await workflowClient.notify({
-                eventId: `order-updated-${id}`,
-                eventData: { status }
+            console.log(`Triggering updated workflow for: order-updated-${id} with status ${status}`);
+            await workflowClient.trigger({
+                url: destination,
+                body: { orderId: id }, 
+                retries: 0
             });
         } catch (wfError) {
-             console.error('Failed to notify workflow (non-fatal):', wfError?.message || wfError);
+             console.error('Failed to trigger workflow update (non-fatal):', wfError?.message || wfError);
         }
 
         res.status(200).json({ success: true, message: "Order status updated", data: order });
