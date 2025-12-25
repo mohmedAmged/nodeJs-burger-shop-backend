@@ -1,7 +1,7 @@
 import { Router } from "express";
+import { orderWorkflow } from "../controllers/workflow.controller.js";
 
 const workflowRouter = Router();
-import { orderWorkflow } from "../controllers/workflow.controller.js";
 
 workflowRouter.post("/order", orderWorkflow);
 

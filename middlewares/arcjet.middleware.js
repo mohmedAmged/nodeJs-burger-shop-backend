@@ -11,7 +11,8 @@ const arcjetMiddleware = async (req, res, next)=>{
         next();
     } catch (error) {
         console.log(`Arcjet Middleware Error: ${error}`);
-        next(error)
+        // Fail open: allow the request to proceed if Arcjet fails
+        next();
     }
 }
 

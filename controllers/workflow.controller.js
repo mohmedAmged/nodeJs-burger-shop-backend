@@ -3,7 +3,7 @@ import Order from "../models/order.model.js";
 import { sendEmail } from "../utils/send-email.js";
 import { generateEmailTemplate } from "../utils/email-template.js";
 
-export const sendReminders = serve(async (context) => {
+export const orderWorkflow = serve(async (context) => {
     const { orderId } = context.requestPayload;
 
     // Step 1: Fetch the initial order
