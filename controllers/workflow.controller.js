@@ -8,7 +8,7 @@ export const orderWorkflow = serve(async (context) => {
     const { orderId } = context.requestPayload;
     
     // Initial fetch
-    const order = await fetchOrder(context, orderId);
+    const order = await fetchOrder(context, "get-initial-order", orderId);
     if (!order) {
         console.error("Order not found");
         return;
@@ -51,16 +51,16 @@ export const orderWorkflow = serve(async (context) => {
         }
 
         // 3c. Send Status Update Email
-        const updatedOrder = await fetchOrder(context, orderId);
+        const updatedOrder = await fetchOrder(context, `get-updated-order-${stepIndex}`, orderId);
         if (updatedOrder) {
              await triggerUpdateEmail(context, stepIndex, updatedOrder, currentStatus);
         }
     }
 });
 
-const fetchOrder = async (context, orderId) => {
-    return await context.run("get-order", async () => {
-        return await Order.findById(orderId).populate("user", "name email");
+const fetchOrder = async (context, stepName, orderId) => {
+    return await context.run(stepName, async () => {
+        return await Order.findById(orderId).populate("user", "name email").lean();
     });
 };
 
@@ -74,7 +74,7 @@ const triggerConfirmationEmail = async (context, order) => {
 const triggerUpdateEmail = async (context, stepIndex, order, status) => {
     return await context.run(`send-status-email-${stepIndex}`, async () => {
         console.log(`Triggering status email for ${status}`);
-        const orderWithCurrentStatus = { ...order.toObject(), status: status };
+        const orderWithCurrentStatus = { ...order, status: status };
         
         await sendOrderEmail(
             order.user.email, 
