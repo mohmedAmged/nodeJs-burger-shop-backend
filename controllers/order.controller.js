@@ -88,7 +88,7 @@ export const createOrder = async (req,res,next)=>{
         // Trigger the order workflow
         const serverUrl = SERVER_URL || "http://localhost:3000";
         try {
-            await workFlowClient.trigger({
+            await workFlowClient.publishJSON({
                 url: `${serverUrl}/api/v1/workflows/order`,
                 body: { orderId: created._id }
             });
@@ -200,9 +200,9 @@ export const updateOrderStatus = async (req,res,next)=>{
         
         // Notify the workflow about the status change
         try {
-            await workFlowClient.notify({
-                eventId: `order-updated-${id}`,
-                eventData: { status }
+            await workFlowClient.publishJSON({
+                topic: `order-updated-${id}`,
+                body: { status }
             });
         } catch (error) {
             console.error("Failed to notify order workflow:", error);
