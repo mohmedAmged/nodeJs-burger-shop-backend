@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import Cart from "../models/cart.model.js";
 import Order from "../models/order.model.js";
+import { workFlowClient } from "../config/upstash.js";
+import { SERVER_URL } from "../config/env.js";
 // user controller
 export const getUserOrders = async (req,res,next)=>{
     try {
@@ -81,6 +83,14 @@ export const createOrder = async (req,res,next)=>{
 
         await session.commitTransaction();
         session.endSession();
+
+        
+        // Trigger the order workflow
+        const serverUrl = SERVER_URL || "http://localhost:3000";
+        await workFlowClient.trigger({
+            url: `${serverUrl}/api/v1/workflows/order`,
+            body: { orderId: created._id }
+        });
 
         res.status(201).json({ success: true, message: "Order created successfully", data: created });
     } catch (error) {
@@ -181,6 +191,13 @@ export const updateOrderStatus = async (req,res,next)=>{
             error.statusCode = 404;
             throw error;
         }
+
+        
+        // Notify the workflow about the status change
+        await workFlowClient.notify({
+            eventId: `order-updated-${id}`,
+            eventData: { status }
+        });
 
         res.status(200).json({ success: true, message: "Order status updated", data: order });
     } catch (error) {
