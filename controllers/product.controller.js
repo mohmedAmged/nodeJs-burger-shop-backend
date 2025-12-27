@@ -61,11 +61,7 @@ export const createProduct = async(req,res,next)=>{
             error.statusCode = 403;
             throw error;
         }
-         const { name, description, price, category, title, available, currency, stock } = req.body;
-         let image = req.body.image;
-         if (req.file) {
-             image = req.file.path.replace(/\\/g, "/");
-         }
+         const { name, description, price, image, category, title, available, currency, stock } = req.body;
          if (!name || price === undefined || !category) {
             const error = new Error('Missing required fields: name, price and category are required');
             error.statusCode = 400;
@@ -115,9 +111,6 @@ export const updateProduct = async(req,res,next)=>{
         }
         const { slug: productSlug } = req.params;
         const updateData = { ...req.body };
-        if (req.file) {
-            updateData.image = req.file.path.replace(/\\/g, "/");
-        }
 
         // validate and normalize stock if provided
         if (updateData.stock !== undefined) {
