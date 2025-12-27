@@ -17,7 +17,8 @@ const app = express();
 app.use(cors({
   origin: [
     'http://localhost:5173',
-    'https://burger-shop-gamma-wine.vercel.app', // add when deployed
+    'https://burger-shop-gamma-wine.vercel.app', 
+    'https://dashboard-admin-burger-shop.vercel.app'
   ],
   credentials: true,
 }))
