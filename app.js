@@ -36,6 +36,7 @@ app.use('/api/v1/products', productRouter);
 app.use('/api/v1/cart', cartRouter);
 app.use('/api/v1/orders', orderRouter);
 app.use('/api/v1/workflows', workflowRouter);
+app.use('/uploads', express.static('uploads'));
 app.use(errorMiddleware)
 
 app.get('/', (req, res)=>{
