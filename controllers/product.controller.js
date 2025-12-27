@@ -144,6 +144,7 @@ export const updateProduct = async(req,res,next)=>{
 }
 
 export const removeProduct = async(req,res,next)=>{
+    const products = await Product.find().select('-__v').populate('category').lean();
     try {
         if (!req.user || req.user.role !== 'ADMIN') {
             const error = new Error('Forbidden: Admins only');
@@ -157,7 +158,7 @@ export const removeProduct = async(req,res,next)=>{
             error.statusCode = 404;
             throw error;
         }
-        res.status(200).json({ success: true, message: 'Product removed successfully', data: product });
+        res.status(200).json({ success: true, message: 'Product removed successfully', data: products });
     } catch (error) {
         next(error);
     }
