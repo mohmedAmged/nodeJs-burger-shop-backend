@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Cart from "../models/cart.model.js";
 import Product from "../models/product.model.js";
 import Voucher from "../models/voucher.model.js";
+import Order from "../models/order.model.js";
 
 // HELPERS
 const resolveProductByIdOrSlug = async (identifier) => {
@@ -381,6 +382,13 @@ export const applyVoucherToCart = async (req, res, next) => {
             return res.status(404).json({ message: 'Invalid voucher code' });
         }
         
+        if (voucher.oncePerUser) {
+             const usedBefore = await Order.findOne({ user: userId, voucher: voucher._id });
+             if (usedBefore) {
+                 return res.status(400).json({ message: 'You have already used this voucher' });
+             }
+        }
+        
         cart.voucher = voucher._id;
         
         await applyVoucherLogic(cart, userId);
@@ -391,7 +399,7 @@ export const applyVoucherToCart = async (req, res, next) => {
 
         await cart.save();
         await cart.populate('voucher');
-        await cart.populate('items.product');
+        await cart.populate('items.product', 'name price slug image category title description currency');
 
         res.status(200).json({
             success: true,
@@ -421,7 +429,8 @@ export const removeVoucherFromCart = async (req, res, next) => {
         cart.voucher = null;
         await applyVoucherLogic(cart, userId);
         await cart.save();
-        
+        await cart.populate('voucher');
+        await cart.populate('items.product', 'name price slug image category title description currency');
         res.status(200).json({
             success: true,
             message: 'Voucher removed',
