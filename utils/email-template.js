@@ -20,7 +20,7 @@ export const emailTemplates = [
               </tr>
               <tr>
                 <td style="color: #666666;">Total Price:</td>
-                <td><strong>${data.totalPrice} EGP</strong></td>
+                <td><strong>${data.totalPriceAfterCode || data.totalPrice} EGP</strong></td>
               </tr>
                <tr>
                 <td style="color: #666666;">Payment Method:</td>
