@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Cart from "../models/cart.model.js";
 import Product from "../models/product.model.js";
+import Voucher from "../models/voucher.model.js";
 
 // HELPERS
 const resolveProductByIdOrSlug = async (identifier) => {
@@ -11,6 +12,65 @@ const resolveProductByIdOrSlug = async (identifier) => {
 }
 const recalcCartTotal = (items) =>
     items.reduce((sum, item) => sum + item.itemTotal, 0);
+
+const applyVoucherLogic = async (cart, userId) => {
+    cart.totalPrice = recalcCartTotal(cart.items);
+    
+    if (!cart.voucher) {
+        cart.savings = 0;
+        cart.totalPriceAfterCode = cart.totalPrice;
+        return;
+    }
+
+    const voucher = await Voucher.findById(cart.voucher);
+    if (!voucher) {
+         cart.voucher = null;
+         cart.savings = 0;
+         cart.totalPriceAfterCode = cart.totalPrice;
+         return;
+    }
+
+    // Re-validate voucher
+    const now = new Date();
+    let isValid = true;
+    
+    if (voucher.status !== 'ACTIVE') isValid = false;
+    if (voucher.startDate && now < new Date(voucher.startDate)) isValid = false;
+    if (voucher.endDate && now > new Date(voucher.endDate)) isValid = false;
+    if (voucher.minOrderValue && cart.totalPrice < voucher.minOrderValue) isValid = false;
+
+    if (voucher.maxTotalUsage !== null && voucher.maxTotalUsage !== undefined && voucher.usedCount >= voucher.maxTotalUsage) isValid = false;
+    
+    // User specific check
+     if (!voucher.isGlobal) {
+         if (!voucher.allowedUsers.includes(userId)) {
+             isValid = false;
+         }
+    }
+
+    if (!isValid) {
+        cart.voucher = null;
+        cart.savings = 0;
+        cart.totalPriceAfterCode = cart.totalPrice;
+        return;
+    }
+
+    // Calculate discount
+    let discount = 0;
+    if (voucher.type === 'PERCENTAGE') {
+        discount = (voucher.value / 100) * cart.totalPrice;
+        if (voucher.maxDiscount && discount > voucher.maxDiscount) {
+            discount = voucher.maxDiscount;
+        }
+    } else {
+        discount = voucher.value;
+    }
+
+    if (discount > cart.totalPrice) discount = cart.totalPrice;
+
+    cart.savings = discount;
+    cart.totalPriceAfterCode = cart.totalPrice - discount;
+};
 
 // GET CART
 
@@ -23,12 +83,20 @@ try {
             throw error;
         }
 
-        const cart = await Cart.findOne({ user: userId })
+        let cart = await Cart.findOne({ user: userId })
             .populate('items.product', 'name price slug image category title description currency')
-            .lean();
-
+            .populate('voucher')
+            .lean(); 
+        
         const items = (cart && cart.items) ? cart.items : [];
-        res.status(200).json({ success: true, message: 'Cart items fetched', data: {items, totalPrice: cart?.totalPrice || 0} });
+        const responseData = {
+            items,
+            totalPrice: cart?.totalPrice || 0,
+            voucher: cart?.voucher || null,
+            savings: cart?.savings || 0,
+            totalPriceAfterCode: cart?.totalPriceAfterCode || (cart?.totalPrice || 0)
+        };
+        res.status(200).json({ success: true, message: 'Cart items fetched', data: responseData });
 } catch (error) {
     next(error);
 }
@@ -92,7 +160,9 @@ try {
                 itemTotal
                 }],
                 totalPrice: itemTotal,
+                totalPriceAfterCode: itemTotal
         });
+        // new cart, no voucher yet
     } else {
       const item = cart.items.find(
         (i) => String(i.product) === String(productDoc._id)
@@ -108,18 +178,24 @@ try {
           itemTotal,
         });
       }
-      cart.totalPrice = recalcCartTotal(cart.items);
+      // logic handles save
+      await applyVoucherLogic(cart, userId);
       await cart.save();
     }
     
 
     await cart.populate('items.product', 'name price slug image');
+    if (cart.voucher) await cart.populate('voucher');
+
     res.status(201).json({ 
         success: true, 
         message: 'Item added to cart', 
         data: {
             items: cart.items,
-            totalPrice: cart.totalPrice
+            totalPrice: cart.totalPrice,
+            voucher: cart.voucher,
+            savings: cart.savings,
+            totalPriceAfterCode: cart.totalPriceAfterCode
         } 
     });
 } catch (error) {
@@ -202,15 +278,22 @@ try {
         cart.items[itemIndex].quantity = qty;
         cart.items[itemIndex].itemTotal = productDoc.price * qty;
     }
-    cart.totalPrice = recalcCartTotal(cart.items);
+    
+    await applyVoucherLogic(cart, userId);
     await cart.save();
+    
     await cart.populate('items.product', 'name price slug image category title description currency');
+    if (cart.voucher) await cart.populate('voucher');
+
     res.status(200).json({
          success: true, 
          message: 'Cart updated', 
          data: {
             items: cart.items,
-            totalPrice: cart.totalPrice
+            totalPrice: cart.totalPrice,
+            voucher: cart.voucher,
+            savings: cart.savings,
+            totalPriceAfterCode: cart.totalPriceAfterCode
         }
         });
 } catch (error) {
@@ -256,18 +339,101 @@ try {
     if (restoreQty > 0) {
         await Product.findByIdAndUpdate(productDoc._id, { $inc: { stock: restoreQty } });
     }
-    cart.totalPrice = recalcCartTotal(cart.items);
+    
+    await applyVoucherLogic(cart, userId);
     await cart.save();
+    
     await cart.populate('items.product', 'name price slug image category title description currency');
+    if (cart.voucher) await cart.populate('voucher');
+
     res.status(200).json({
         success: true, 
         message: 'Item removed from cart', 
         data: {
             items: cart.items,
-            totalPrice: cart.totalPrice
+            totalPrice: cart.totalPrice,
+            voucher: cart.voucher,
+            savings: cart.savings,
+            totalPriceAfterCode: cart.totalPriceAfterCode
         } 
     });
 } catch (error) {
     next(error);
 }
 }
+
+export const applyVoucherToCart = async (req, res, next) => {
+    try {
+        const userId = req.user && req.user._id;
+        const { code } = req.body;
+
+        if (!code) {
+             return res.status(400).json({ message: 'Voucher code is required'});
+        }
+
+        const cart = await Cart.findOne({ user: userId });
+        if (!cart) {
+             return res.status(404).json({ message: 'Cart not found' });
+        }
+
+        const voucher = await Voucher.findOne({ code });
+        if (!voucher) {
+            return res.status(404).json({ message: 'Invalid voucher code' });
+        }
+        
+        cart.voucher = voucher._id;
+        
+        await applyVoucherLogic(cart, userId);
+        
+        if (!cart.voucher) {
+             return res.status(400).json({ message: 'Voucher valid but not applicable to this cart (e.g. min order value not met)' });
+        }
+
+        await cart.save();
+        await cart.populate('voucher');
+        await cart.populate('items.product');
+
+        res.status(200).json({
+            success: true,
+            message: 'Voucher applied successfully',
+            data: {
+                items: cart.items,
+                totalPrice: cart.totalPrice,
+                voucher: cart.voucher,
+                savings: cart.savings,
+                totalPriceAfterCode: cart.totalPriceAfterCode
+            }
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const removeVoucherFromCart = async (req, res, next) => {
+    try {
+        const userId = req.user && req.user._id;
+        const cart = await Cart.findOne({ user: userId });
+        if (!cart) {
+             return res.status(404).json({ message: 'Cart not found' });
+        }
+
+        cart.voucher = null;
+        await applyVoucherLogic(cart, userId);
+        await cart.save();
+        
+        res.status(200).json({
+            success: true,
+            message: 'Voucher removed',
+             data: {
+                items: cart.items,
+                totalPrice: cart.totalPrice,
+                voucher: null,
+                savings: 0,
+                totalPriceAfterCode: cart.totalPrice
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};

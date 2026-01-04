@@ -28,6 +28,16 @@ const orderSchema = new mongoose.Schema(
             type: Number,
             required: true,
         },
+        voucher: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Voucher"
+        },
+        totalPriceAfterCode: {
+            type: Number
+        },
+        savings: {
+            type: Number
+        },
         deliveryAddress: {
             type: String,
             required: true,

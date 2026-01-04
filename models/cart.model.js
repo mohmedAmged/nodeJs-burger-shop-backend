@@ -30,6 +30,18 @@ const cartSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        voucher: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Voucher",
+            default: null
+        },
+        totalPriceAfterCode: {
+            type: Number
+        },
+        savings: {
+            type: Number,
+            default: 0
+        },
     },
     { timestamps: true }
 );

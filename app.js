@@ -12,6 +12,7 @@ import arcjetMiddleware from './middlewares/arcjet.middleware.js';
 import productRouter from './routes/product.routes.js';
 import categoryRouter from './routes/category.routes.js';
 import workflowRouter from './routes/workflow.routes.js';
+import voucherRouter from './routes/voucher.routes.js';
 
 const app = express();
 app.use(cors({
@@ -36,6 +37,7 @@ app.use('/api/v1/products', productRouter);
 app.use('/api/v1/cart', cartRouter);
 app.use('/api/v1/orders', orderRouter);
 app.use('/api/v1/workflows', workflowRouter);
+app.use('/api/v1/vouchers', voucherRouter);
 app.use(errorMiddleware)
 
 app.get('/', (req, res)=>{
