@@ -13,6 +13,7 @@ import productRouter from './routes/product.routes.js';
 import categoryRouter from './routes/category.routes.js';
 import workflowRouter from './routes/workflow.routes.js';
 import voucherRouter from './routes/voucher.routes.js';
+import dashboardStatsRouter from './routes/dashboardStats.routes.js';
 
 const app = express();
 app.use(cors({
@@ -38,6 +39,7 @@ app.use('/api/v1/cart', cartRouter);
 app.use('/api/v1/orders', orderRouter);
 app.use('/api/v1/workflows', workflowRouter);
 app.use('/api/v1/vouchers', voucherRouter);
+app.use('/api/v1/dashboard-stats', dashboardStatsRouter);
 app.use(errorMiddleware)
 
 app.get('/', (req, res)=>{
