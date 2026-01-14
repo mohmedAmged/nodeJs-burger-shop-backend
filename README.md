@@ -1,194 +1,155 @@
-# NodeJS Burger API
+# 🍔 NodeJS Burger API
 
-Minimal backend for a burger shop built with Express + MongoDB (Mongoose). This README documents current state, used libraries, how to run, implemented endpoints and next steps.
+A robust, feature-rich backend for a Burger Shop application built with **Express.js**, **MongoDB**, and **Upstash**. This API handles everything from user authentication and cart management to automated order workflows and administrative dashboards.
 
-## Status (what's implemented)
-- Project scaffolding and app entry (app.js)
-- Auth: sign-up, sign-in, sign-out (JWT)
-- Users:
-  - Get user by slug
-  - Update user by slug
-  - Get all users (ADMIN only)
-- Products:
-  - Get all products (public)
-  - Create / Update / Remove (ADMIN only)
-  - Unique slug generation
-- Categories:
-  - Category model and controller created (controller kept for future use)
-  - Product currently stores category as String (no ref) per project decision
-- Middlewares:
-  - auth.middleware (JWT + revoked tokens)
-  - error.middleware (centralized error handling)
-  - arcjet.middleware (project-specific)
-- DB connection and session usage where applicable
+## 🚀 Key Features
 
-## Libraries
-- express
-- mongoose
-- dotenv
-- bcrypt
-- jsonwebtoken
-- slug
-- cookie-parser
-- nodemon (dev)
+- **🔐 Advanced Authentication**:
+  - JWT-based authentication with secure cookie storage.
+  - Automated logout on token expiry.
+  - Role-based Access Control (RBAC) - Public, User, and Admin tiers.
+- **🛒 Cart & Checkout**:
+  - Persistent shopping cart for authenticated users.
+  - Real-time stock reservation upon adding items to cart.
+  - Automatic stock restoration if items are removed or cart expires.
+- **🏷️ Voucher System**:
+  - Flexible discount codes (Percentage or Fixed amount).
+  - Usage limits: Global limits, per-user limits (Once per user), and minimum order values.
+  - Start/End date validation and status management.
+- **📦 Order Management**:
+  - Secure checkout flow converting cart to orders.
+  - Detailed order tracking with multiple statuses (Pending, Preparing, Out for Delivery, Delivered).
+  - Admin controls for updating order status.
+- **🤖 Automated Workflows (Upstash)**:
+  - Event-driven order processing using **Upstash Workflow**.
+  - Automated email notifications (Order confirmation & status updates) via **Nodemailer**.
+  - "Self-healing" status checks to ensure data consistency between the database and the workflow.
+- **📊 Admin Dashboard Statistics**:
+  - Comprehensive metrics: Total Revenue, Total Orders, Total Users, and Total Products.
+  - Sales Trend analysis (Last 7 days).
+  - Top-selling products ranking.
+  - Order status distribution.
+- **🛡️ Security & Protection**:
+  - **Arcjet Integration**: Bot detection, rate limiting, and email verification.
+  - Input validation and centralized error handling.
+  - Secure password hashing with Bcrypt.
+- **🖼️ Product & Category Management**:
+  - Full CRUD for products and categories (Admin only).
+  - Unique slug generation for SEO-friendly URLs.
+  - Support for product availability and stock management.
 
-## Environment variables
-Place in `.env.development.local` (remove surrounding quotes):
-```
+## 🛠️ Technology Stack
+
+- **Runtime**: Node.js
+- **Framework**: Express.js
+- **Database**: MongoDB (Mongoose ODM)
+- **Authentication**: JWT (JsonWebToken)
+- **Security**: Arcjet (Bot protection, Rate limit)
+- **Automation**: Upstash Workflow & QStash
+- **Emails**: Nodemailer
+- **Utilities**: Bcrypt, Slug, Cookie-parser, Morgan
+
+## 📂 API Endpoints
+
+### 🔑 Authentication
+
+| Method | Endpoint                | Description                | Access |
+| :----- | :---------------------- | :------------------------- | :----- |
+| `POST` | `/api/v1/auth/sign-up`  | Create a new account       | Public |
+| `POST` | `/api/v1/auth/sign-in`  | Sign in to account         | Public |
+| `POST` | `/api/v1/auth/sign-out` | Sign out and clear cookies | Public |
+
+### 👤 User Management
+
+| Method | Endpoint                     | Description              | Access |
+| :----- | :--------------------------- | :----------------------- | :----- |
+| `GET`  | `/api/v1/users/:slug`        | Get user profile by slug | User   |
+| `PUT`  | `/api/v1/users/update/:slug` | Update user profile      | User   |
+| `GET`  | `/api/v1/users`              | Get list of all users    | Admin  |
+
+### 🍔 Products & Categories
+
+| Method   | Endpoint                        | Description            | Access |
+| :------- | :------------------------------ | :--------------------- | :----- |
+| `GET`    | `/api/v1/products`              | Get all products       | Public |
+| `POST`   | `/api/v1/products/create`       | Create new product     | Admin  |
+| `PUT`    | `/api/v1/products/update/:slug` | Update product details | Admin  |
+| `DELETE` | `/api/v1/products/remove/:slug` | Delete a product       | Admin  |
+| `GET`    | `/api/v1/categories`            | Get all categories     | Public |
+| `POST`   | `/api/v1/categories/create`     | Create new category    | Admin  |
+
+### 🛒 Shopping Cart
+
+| Method   | Endpoint                     | Description           | Access |
+| :------- | :--------------------------- | :-------------------- | :----- |
+| `GET`    | `/api/v1/cart`               | Get user's cart       | User   |
+| `POST`   | `/api/v1/cart/add`           | Add item to cart      | User   |
+| `PUT`    | `/api/v1/cart/update/:slug`  | Update item quantity  | User   |
+| `DELETE` | `/api/v1/cart/remove/:slug`  | Remove item from cart | User   |
+| `POST`   | `/api/v1/cart/apply-voucher` | Apply a discount code | User   |
+
+### 📦 Orders
+
+| Method | Endpoint                           | Description                | Access     |
+| :----- | :--------------------------------- | :------------------------- | :--------- |
+| `GET`  | `/api/v1/orders`                   | Get user's order history   | User       |
+| `POST` | `/api/v1/orders/create`            | Checkout and create order  | User       |
+| `GET`  | `/api/v1/orders/:id`               | Get specific order details | User/Admin |
+| `PUT`  | `/api/v1/orders/update-status/:id` | Update order status        | Admin      |
+
+### 📈 Dashboard & Vouchers
+
+| Method | Endpoint                  | Description            | Access |
+| :----- | :------------------------ | :--------------------- | :----- |
+| `GET`  | `/api/v1/dashboard-stats` | Fetch business metrics | Admin  |
+| `GET`  | `/api/v1/vouchers`        | Get all vouchers       | Admin  |
+| `POST` | `/api/v1/vouchers/create` | Create new voucher     | Admin  |
+
+## ⚙️ Environment Variables
+
+Create a `.env.development.local` file in the root directory:
+
+```env
 PORT=3500
 NODE_ENV=development
-DB_URI=<mongodb-connection-string>
-JWT_SECRET=<secret>
+DB_URI=mongodb+srv://...
+JWT_SECRET=your_jwt_secret
 JWT_EXPIRES_IN=1d
-ARCJET_KEY=<key>
+ARCJET_KEY=aj_your_key
 ARCJET_ENV=development
-ADMIN_CREATION_SECRET=<admin_secret>  # used only for admin bootstrap
+
+# Upstash/QStash (For Workflows)
+QSTASH_TOKEN=your_qstash_token
+QSTASH_URL=https://qstash.upstash.io/v1/...
+QSTASH_CURRENT_SIGNING_KEY=...
+QSTASH_NEXT_SIGNING_KEY=...
+
+# Email configuration
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASS=your_app_password
 ```
-Note: If using MongoDB Atlas, add your IP to the Atlas Network Access list.
 
-## How to run
-1. npm install
-2. Create .env file as above
-3. Start server:
-   - npx nodemon app.js
-   - or node app.js
-Server listens on http://localhost:3500 (PORT from env)
+## 🏃 How to Run
 
-## Important endpoints
-- Auth
-  - POST /api/v1/auth/sign-up
-  - POST /api/v1/auth/sign-in
-  - POST /api/v1/auth/sign-out
-- Users (protected)
-  - GET /api/v1/users/:slug
-  - PUT /api/v1/users/update/:slug
-  - GET /api/v1/users (ADMIN only)
-- Products
-  - GET /api/v1/products
-  - POST /api/v1/products/create (ADMIN only)
-  - PUT /api/v1/products/update/:slug (ADMIN only)
-  - DELETE /api/v1/products/remove/:slug (ADMIN only)
-- Categories (routes wired; controller implemented)
-  - GET /api/v1/categories
-  - POST /api/v1/categories/create (ADMIN only)
-  - PUT /api/v1/categories/update/:slug (ADMIN only)
-  - DELETE /api/v1/categories/remove/:slug (ADMIN only)
+1. **Install dependencies**:
 
-## Admin creation / protection
-- Creating ADMIN via sign-up is protected server-side.
-- Two allowed flows:
-  1. Existing ADMIN creates another ADMIN: send Authorization: Bearer <admin-token>.
-  2. Bootstrap: send header `x-admin-key: <ADMIN_CREATION_SECRET>` (use only for initial setup).
-- Recommended: bootstrap first admin with ADMIN_CREATION_SECRET, then create future admins only via existing admin account. Keep secrets secure and use HTTPS.
+   ```bash
+   npm install
+   ```
 
-## Notes & known decisions
-- Product.category is currently stored as a string (no ObjectId ref). Category controller exists and can be enabled when switching to ObjectId refs.
-- Sign-up currently generates a unique slug for users.
+2. **Configure Environment Variables**:
+   Fill in the `.env` file as shown above.
 
-## Next work / TODO
-- Cart: model, controllers, routes (add/remove/update/get)
-- Orders: create from cart, order status, history, payment integration
-- Deployment: environment configs, secret management, CI/CD
+3. **Start the development server**:
+   ```bash
+   npm run dev
+   ```
+   The API will be available at `http://localhost:3500`.
 
-## Quick tips
-- Create categories (admin) before creating products that reference them.
-- Use Postman/curl with Authorization: Bearer <token> for protected routes.
-- If MongoDB connection fails, check Atlas IP whitelist or use 0.0.0.0/0 for testing only.
+## 📜 Admin Bootstrap
 
-```// filepath: f:\web development\backend\nodejs-burger-api\README.md
-# NodeJS Burger API
+To create the first admin user, you can use the `ADMIN_CREATION_SECRET` (if configured) in the request header `x-admin-key` during sign-up, or manually update a user's role in the database to `ADMIN`.
 
-Minimal backend for a burger shop built with Express + MongoDB (Mongoose). This README documents current state, used libraries, how to run, implemented endpoints and next steps.
+---
 
-## Status (what's implemented)
-- Project scaffolding and app entry (app.js)
-- Auth: sign-up, sign-in, sign-out (JWT)
-- Users:
-  - Get user by slug
-  - Update user by slug
-  - Get all users (ADMIN only)
-- Products:
-  - Get all products (public)
-  - Create / Update / Remove (ADMIN only)
-  - Unique slug generation
-- Categories:
-  - Category model and controller created (controller kept for future use)
-  - Product currently stores category as String (no ref) per project decision
-- Middlewares:
-  - auth.middleware (JWT + revoked tokens)
-  - error.middleware (centralized error handling)
-  - arcjet.middleware (project-specific)
-- DB connection and session usage where applicable
-
-## Libraries
-- express
-- mongoose
-- dotenv
-- bcrypt
-- jsonwebtoken
-- slug
-- cookie-parser
-- nodemon (dev)
-
-## Environment variables:
-```
-PORT=3500
-NODE_ENV=development
-DB_URI=<mongodb-connection-string>
-JWT_SECRET=<secret>
-JWT_EXPIRES_IN=1d
-ARCJET_KEY=<key>
-ARCJET_ENV=development
-ADMIN_CREATION_SECRET=<admin_secret>  # used only for admin bootstrap
-```
-Note: If using MongoDB Atlas, add your IP to the Atlas Network Access list.
-
-## How to run
-1. npm install
-2. Create .env file as above
-3. Start server:
-   - npx nodemon app.js
-   - or node app.js
-Server listens on http://localhost:3500 (PORT from env)
-
-## Important endpoints
-- Auth
-  - POST /api/v1/auth/sign-up
-  - POST /api/v1/auth/sign-in
-  - POST /api/v1/auth/sign-out
-- Users (protected)
-  - GET /api/v1/users/:slug
-  - PUT /api/v1/users/update/:slug
-  - GET /api/v1/users (ADMIN only)
-- Products
-  - GET /api/v1/products
-  - POST /api/v1/products/create (ADMIN only)
-  - PUT /api/v1/products/update/:slug (ADMIN only)
-  - DELETE /api/v1/products/remove/:slug (ADMIN only)
-- Categories (routes wired; controller implemented)
-  - GET /api/v1/categories
-  - POST /api/v1/categories/create (ADMIN only)
-  - PUT /api/v1/categories/update/:slug (ADMIN only)
-  - DELETE /api/v1/categories/remove/:slug (ADMIN only)
-
-## Admin creation / protection
-- Creating ADMIN via sign-up is protected server-side.
-- Two allowed flows:
-  1. Existing ADMIN creates another ADMIN: send Authorization: Bearer <admin-token>.
-  2. Bootstrap: send header `x-admin-key: <ADMIN_CREATION_SECRET>` (use only for initial setup).
-- Recommended: bootstrap first admin with ADMIN_CREATION_SECRET, then create future admins only via existing admin account. Keep secrets secure and use HTTPS.
-
-## Notes & known decisions
-- Product.category is currently stored as a string (no ObjectId ref). Category controller exists and can be enabled when switching to ObjectId refs.
-- Sign-up currently generates a unique slug for users.
-- Do not trust client-supplied role in production; role assignment is server-controlled.
-
-## Next work / TODO
-- Cart: model, controllers, routes (add/remove/update/get)
-- Orders: create from cart, order status, history, payment integration
-- Deployment: environment configs, secret management, CI/CD
-
-## Quick tips
-- Create categories (admin) before creating products that reference them.
-- Use Postman/curl with Authorization: Bearer <token> for protected routes.
-- If MongoDB connection fails, check Atlas IP whitelist or use 0.0.0.0/0 for testing only.
+_Created with ❤️ for the Burger Shop Project._
